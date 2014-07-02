@@ -110,9 +110,44 @@ void parse_serial(char string[])
   write_db(sql);
 }
 
+static const struct option longopts[] =
+{
+  { "help", no_argument, NULL, 'h' },
+  { "version", no_argument, NULL, 'v' },
+  { NULL, 0, NULL, 0 }
+};
+
 int main(int argc, char *argv[])
 {
+  int optc;
+  int t = 0,n = 0,lose = 0;
+  program_name = argv[0];
+
+  while ((optc = getopt_long (argc, argv, "g:hntv", longopts, NULL)) != -1)
+    switch (optc)
+    {
+      case 'v':
+        print_version();
+        exit(EXIT_SUCCESS);
+        break;
+      case 'h':
+        print_help();
+        exit(EXIT_SUCCESS);
+        break;
+    }
+  if (lose || optind < argc)
+  {
+    if (optind < argc) 
+      fprintf(stderr, _("%s: extra operand: %\n"),
+          program_name, argv[optind]);
+    fprintf(stderr, _"Try '%s --help' for more information.\n"), program_name);
+    exit(EXIT_FAILURE);
+  }
   setup_db();
   char rawSerial[] = "uno3|rss3|get:unread|";
   parse_serial(rawSerial);
 }
+
+static void print_help()
+{
+  printf(_("Usage; %s [OPTION]. . .\n") project_name);
