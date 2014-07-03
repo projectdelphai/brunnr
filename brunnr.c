@@ -3,15 +3,20 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <sqlite3.h>
+#include <getopt.h>
 
 void trim(char *str);
 static int callback(void *NotUsed, int argc, char **argv, char **azColName);
+static void print_version();
+static void print_help();
 void setup_serial();
 void setup_db();
 void write_db(char *sql);
 void parse_serial(char string[]);
 void read_eternal();
 
+const char *program_name = "brunnr";
+const char *VERSION = "0.0.1";
 char *portname = "/dev/ttyACM0";
 char buf[256];
 int fd, n;
@@ -128,20 +133,20 @@ int main(int argc, char *argv[])
     {
       case 'v':
         print_version();
-        exit(EXIT_SUCCESS);
+        //exit(0);
         break;
       case 'h':
         print_help();
-        exit(EXIT_SUCCESS);
+        //exit(0);
         break;
     }
   if (lose || optind < argc)
   {
     if (optind < argc) 
-      fprintf(stderr, _("%s: extra operand: %\n"),
+      fprintf(stderr, ("%s: extra operand: %\n"),
           program_name, argv[optind]);
-    fprintf(stderr, _"Try '%s --help' for more information.\n"), program_name);
-    exit(EXIT_FAILURE);
+    fprintf(stderr, "Try 'brunnr --help' for more information.\n");
+    //exit(1);
   }
   setup_db();
   char rawSerial[] = "uno3|rss3|get:unread|";
@@ -150,4 +155,19 @@ int main(int argc, char *argv[])
 
 static void print_help()
 {
-  printf(_("Usage; %s [OPTION]. . .\n") project_name);
+  puts ("");
+  fprintf(stdout, "Usage; brunnr [OPTION] \n");
+  fprintf(stdout, "Interact with arduinos through the serial port.\n");
+  puts ("");
+  fprintf(stdout, "-h, --help          print this help message\n-v, --version       print the current version number\n");
+  fprintf(stdout, "\n");
+  fprintf(stdout, "Report bugs to https://github.com/projectdelphai/brunnr\n");
+  puts ("");
+}
+
+static void print_version()
+{
+  printf("brunnr %s\n", VERSION);
+  puts("");
+}
+      
