@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <sqlite3.h>
@@ -18,6 +19,8 @@ void read_eternal();
 const char *program_name = "brunnr";
 const char *VERSION = "0.0.1";
 char *portname = "/dev/ttyACM0";
+char *db_file = "brunnr.db";
+char *search = "|";
 char buf[256];
 int fd, n;
 
@@ -81,7 +84,7 @@ void write_db(char *sql)
   char *zErrMsg = 0;
   int rc = 0;
 
-  rc = sqlite3_open("brunnr.db", &db);
+  rc = sqlite3_open(db_file, &db);
 
   if ( rc ) {
     fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
@@ -104,7 +107,6 @@ void setup_db()
 
 void parse_serial(char string[]) 
 {
-  char *search = "|";
   char sql[1024];
   
   char *source = strtok(string, search);
@@ -133,11 +135,11 @@ int main(int argc, char *argv[])
     {
       case 'v':
         print_version();
-        //exit(0);
+        exit(0);
         break;
       case 'h':
         print_help();
-        //exit(0);
+        exit(0);
         break;
     }
   if (lose || optind < argc)
@@ -146,11 +148,9 @@ int main(int argc, char *argv[])
       fprintf(stderr, ("%s: extra operand: %\n"),
           program_name, argv[optind]);
     fprintf(stderr, "Try 'brunnr --help' for more information.\n");
-    //exit(1);
+    exit(1);
   }
   setup_db();
-  char rawSerial[] = "uno3|rss3|get:unread|";
-  parse_serial(rawSerial);
 }
 
 static void print_help()
