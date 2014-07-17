@@ -14,13 +14,15 @@ void setup_serial();
 void setup_db();
 void write_db(char *sql);
 void parse_serial(char string[]);
-void read_eternal();
+void read_serial();
 
 const char *program_name = "brunnr";
 const char *VERSION = "0.0.1";
-char *portname = "/dev/ttyACM0";
-char *db_file = "brunnr.db";
+char *portname = NULL;
+char *output = "stdout";
+char *db_file = NULL;
 char *search = "|";
+char *loop = NULL;
 char buf[256];
 int fd, n;
 
@@ -55,16 +57,21 @@ void setup_serial()
   tcflush(fd, TCIFLUSH);
 }
 
-void read_eternal()
+void read_serial()
 {
-  while (1<2) {
-    n = read(fd, buf, 256);
-    buf[n] = 0;
-    trim(buf);
-    if(strlen(buf) > 0) {
+  n = read(fd, buf, 256);
+  buf[n] = 0;
+  trim(buf);
+  if(strlen(buf) > 0) {
+    if (output == "stdout") {
+      printf("Printing to stdout . . .\n");
       printf("%s\n", buf);
-      parse_serial(buf);
+    } else if (output == "db") {
+      printf("Printing to a database file . . .\n");
+    } else {
+      printf("Output mode not supported. . .\n");
     }
+    parse_serial(buf);
   }
 }
 
@@ -84,6 +91,10 @@ void write_db(char *sql)
   char *zErrMsg = 0;
   int rc = 0;
 
+  if (db_file == NULL) {
+    printf("Database filename hasn't been specified. . .\n");
+    exit(1);
+  }
   rc = sqlite3_open(db_file, &db);
 
   if ( rc ) {
@@ -121,6 +132,9 @@ static const struct option longopts[] =
 {
   { "help", no_argument, NULL, 'h' },
   { "version", no_argument, NULL, 'v' },
+  { "port", required_argument, 0, 'p' },
+  { "file", required_argument, 0, 'f' },
+  { "output", required_argument, 0, 'o' },
   { NULL, 0, NULL, 0 }
 };
 
@@ -130,7 +144,7 @@ int main(int argc, char *argv[])
   int t = 0,n = 0,lose = 0;
   program_name = argv[0];
 
-  while ((optc = getopt_long (argc, argv, "g:hntv", longopts, NULL)) != -1)
+  while ((optc = getopt_long (argc, argv, "g:vhpfo", longopts, NULL)) != -1)
     switch (optc)
     {
       case 'v':
@@ -141,6 +155,15 @@ int main(int argc, char *argv[])
         print_help();
         exit(0);
         break;
+      case 'p':
+        portname = strdup(optarg);
+        break;
+      case 'f':
+        db_file = strdup(optarg);
+        break;
+      case 'o':
+        output = "db";
+        break;
     }
   if (lose || optind < argc)
   {
@@ -150,7 +173,23 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Try 'brunnr --help' for more information.\n");
     exit(1);
   }
-  setup_db();
+  if (portname != NULL) {
+    setup_serial();
+    if (output == "db") {
+      setup_db();
+    }
+    if (loop == NULL) {
+      while (1<2) {
+        read_serial();
+      }
+    } else {
+      for (int i=0; i < loop; i++) {
+        read_serial();
+      }
+    }
+  } else {
+    printf("Portname not specified\n");
+  }
 }
 
 static void print_help()

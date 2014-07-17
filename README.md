@@ -12,13 +12,13 @@ brunnr is designed as a messaging service so that one can share messages and not
 
 Examples
 -------------
-To run on port /dev/ttyASM0 and print to stdout:
+To run on port /dev/ttyASM0 and print to stdout ("-o stdout" is implied):
 
-     brunnr -p /dev/ttyASM0 -o stdout 
+     brunnr -p /dev/ttyASM0
 
-To run on multiple ports and only print the next 5 incoming messages to stdout:
+To run on multiple ports and only print the next 5 incoming messages to stdout ("-o stdout" is implied):
 
-    brunnr -p /dev/ttyASM0,/dev/ttyASM1 -o stdout -n 5
+    brunnr -p /dev/ttyASM0,/dev/ttyASM1 -n 5
 
 To run on port /dev/ttyASM0 and print to a database file:
 
