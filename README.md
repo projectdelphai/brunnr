@@ -12,6 +12,8 @@ brunnr is designed as a messaging service so that one can share messages and not
 
 Examples
 -------------
+NOTE: Not all of these features have been implemented, your results may vary.
+
 To run on port /dev/ttyASM0 and print to stdout ("-o stdout" is implied):
 
      brunnr -p /dev/ttyASM0

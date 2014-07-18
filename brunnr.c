@@ -18,13 +18,15 @@ void parse_serial(char string[]);
 void read_serial();
 
 const char *program_name = "brunnr";
-const char *VERSION = "0.0.1";
+const char *VERSION = "0.0.2";
 char *portname = NULL;
 char *output = "stdout";
 char *db_file = NULL;
 char *search = "|";
 char *loop = NULL;
 char buf[256];
+char *manual_message;
+int manual_write = 1;
 int fd, n;
 
 void trim(char *str) 
@@ -143,7 +145,7 @@ int main(int argc, char *argv[])
   int t = 0,n = 0,lose = 0;
   program_name = argv[0];
 
-  while ((optc = getopt_long (argc, argv, "vhp:f:o:", longopts, NULL)) != -1)
+  while ((optc = getopt_long (argc, argv, "vhp:f:o:w:", longopts, NULL)) != -1)
     switch (optc)
     {
       case 'v':
@@ -162,6 +164,10 @@ int main(int argc, char *argv[])
         break;
       case 'o':
         output = "db";
+        break;
+      case 'w':
+        manual_write = 0;
+        manual_message = optarg;
         break;
     }
   if (lose || optind < argc)
@@ -187,6 +193,10 @@ int main(int argc, char *argv[])
       }
     }
   } else {
+    if (manual_write == 0) {
+      setup_db();
+      parse_serial(manual_message);
+    }
     printf("Portname not specified\n");
   }
 }
