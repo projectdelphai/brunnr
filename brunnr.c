@@ -5,6 +5,7 @@
 #include <termios.h>
 #include <sqlite3.h>
 #include <getopt.h>
+#include <unistd.h>
 
 void trim(char *str);
 static int callback(void *NotUsed, int argc, char **argv, char **azColName);
@@ -64,10 +65,8 @@ void read_serial()
   trim(buf);
   if(strlen(buf) > 0) {
     if (output == "stdout") {
-      printf("Printing to stdout . . .\n");
       printf("%s\n", buf);
     } else if (output == "db") {
-      printf("Printing to a database file . . .\n");
     } else {
       printf("Output mode not supported. . .\n");
     }
@@ -132,9 +131,9 @@ static const struct option longopts[] =
 {
   { "help", no_argument, NULL, 'h' },
   { "version", no_argument, NULL, 'v' },
-  { "port", required_argument, 0, 'p' },
-  { "file", required_argument, 0, 'f' },
-  { "output", required_argument, 0, 'o' },
+  { "port", required_argument, NULL, 'p' },
+  { "file", required_argument, NULL, 'f' },
+  { "output", required_argument, NULL, 'o' },
   { NULL, 0, NULL, 0 }
 };
 
@@ -156,10 +155,10 @@ int main(int argc, char *argv[])
         exit(0);
         break;
       case 'p':
-        portname = strdup(optarg);
+        portname = optarg;
         break;
       case 'f':
-        db_file = strdup(optarg);
+        db_file = optarg;
         break;
       case 'o':
         output = "db";
@@ -183,7 +182,7 @@ int main(int argc, char *argv[])
         read_serial();
       }
     } else {
-      for (int i=0; i < loop; i++) {
+      for (int i=0; i < atoi(loop); i++) {
         read_serial();
       }
     }
