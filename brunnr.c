@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
   int t = 0,n = 0,lose = 0;
   program_name = argv[0];
 
-  while ((optc = getopt_long (argc, argv, "g:vhpfo", longopts, NULL)) != -1)
+  while ((optc = getopt_long (argc, argv, "vhp:f:o:", longopts, NULL)) != -1)
     switch (optc)
     {
       case 'v':
