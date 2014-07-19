@@ -215,7 +215,7 @@ static void print_help()
 
 static void print_version()
 {
-  printf("brunnr %s\n", VERSION);
+  printf("brunnr %s", VERSION);
   puts("");
 }
       
