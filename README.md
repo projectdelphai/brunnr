@@ -4,7 +4,17 @@ Reuben Castelino - projectdelphai@gmail.com
 
 Description
 -------------
-A program written in C that is designed to interact with arduinos through the serial port.
+A [progether](http://reddit.com/r/progether) project.
+
+A program written in C that is designed to interact with arduinos through the serial port. Brunnr is designed as a way for a computer and 1+ arduinos to communicate both online and offline. It works by brunnr reading a special string from designated serial ports. This string contains three pieces of information: the source (the device sending the message), the target (the device which needs to read the message), and the message itself (a string). This string is parsed by brunnr and either outputted to stdout, written to a file, or written to a database. The database is a standard sqlite3 database which can be read by any program that can interat with sqlite database. 
+
+*This portion is still under consideration*
+This interaction isn't a one-way road either. Programs or other arduinos can write messages to the database that are designated to other arduinos. A message can be left on the database for arduinos that brunnr will write across the necessary serial port. Brunnr will write the corresponding messages to the arduino if the respective arduino requests that info (source and target is the same string and message = "request").
+
+*Example*
+ 1. Arduino A leaves a message for Arduino B on Host 1: "b:a:message for b"
+ 1. Arduino B upon starting up requests brunnr for any messages: "b:b:request"
+ 1. Brunnr writes the string to Arduino B: "b:a:message for b"
 
 Usage
 -------------
@@ -12,7 +22,7 @@ brunnr is designed as a messaging service so that one can share messages and not
 
 Examples
 -------------
-NOTE: Not all of these features have been implemented, your results may vary.
+NOTE: Not all of these features have been implemented and/or thoroughly tested so your results may vary.
 
 To run on port /dev/ttyASM0 and print to stdout ("-o stdout" is implied):
 
