@@ -12,9 +12,9 @@ A program written in C that is designed to interact with arduinos through the se
 This interaction isn't a one-way road either. Programs or other arduinos can write messages to the database that are designated to other arduinos. A message can be left on the database for arduinos that brunnr will write across the necessary serial port. Brunnr will write the corresponding messages to the arduino if the respective arduino requests that info (source and target is the same string and message = "request").
 
 *Example*
- 1. Arduino A leaves a message for Arduino B on Host 1: "b:a:message for b"
- 1. Arduino B upon starting up requests brunnr for any messages: "b:b:request"
- 1. Brunnr writes the string to Arduino B: "b:a:message for b"
+ 1. Arduino A leaves a message for Arduino B on Host 1: `"b:a:message for b"`
+ 1. Arduino B upon starting up requests brunnr for any messages: `"b:b:request"`
+ 1. Brunnr writes the string to Arduino B: `"b:a:message for b"`
 
 Usage
 -------------
