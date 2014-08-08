@@ -7,6 +7,8 @@
 #include <getopt.h>
 #include <unistd.h>
 
+
+// methods
 void trim(char *str);
 static int callback(void *NotUsed, int argc, char **argv, char **azColName);
 static void print_version();
@@ -17,6 +19,7 @@ void write_db(char *sql);
 void parse_serial(char string[]);
 void read_serial();
 
+// variables
 const char *program_name = "brunnr";
 const char *VERSION = "0.0.2";
 char *portname = NULL;
@@ -29,6 +32,7 @@ char *manual_message;
 int manual_write = 1;
 int fd, n;
 
+// trim() removes newlines/carriage returns from a string
 void trim(char *str) 
 {
   char *src, *dst;
@@ -39,6 +43,7 @@ void trim(char *str)
   *dst = '\0';
 }
 
+// setup_serial() opens a serial port for reading
 void setup_serial()
 {
   fd = open(portname, O_RDWR | O_NOCTTY);
@@ -60,6 +65,8 @@ void setup_serial()
   tcflush(fd, TCIFLUSH);
 }
 
+// read_serial() reads strings from the specific serial port 
+// and outputs it to either stdout or a database.
 void read_serial()
 {
   n = read(fd, buf, 256);
@@ -86,6 +93,7 @@ static int callback(void *NotUsed, int argc, char **argv, char **azColName)
   return 0;
 }
 
+// write_db() is used to execute SQL statements on the specified database
 void write_db(char *sql)
 {
   sqlite3 *db;
@@ -111,12 +119,15 @@ void write_db(char *sql)
   sqlite3_close(db);
 }
 
+// setup_db() creates the necessary database and schema if it doesn't already exist
 void setup_db()
 {
   char *sql = "CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY, source TEXT NOT NULL, target TEXT NOT NULL, message TEXT NOT NULL)";
   write_db(sql);
 }
 
+// parse_serial() separates an incoming string into source, target, and message
+// and creates a SQL statement to send to write_db()
 void parse_serial(char string[]) 
 {
   char sql[1024];
@@ -129,6 +140,7 @@ void parse_serial(char string[])
   write_db(sql);
 }
 
+// option definitions
 static const struct option longopts[] =
 {
   { "help", no_argument, NULL, 'h' },
@@ -145,6 +157,7 @@ int main(int argc, char *argv[])
   int t = 0,n = 0,lose = 0;
   program_name = argv[0];
 
+  // sets variables based on command line arguments
   while ((optc = getopt_long (argc, argv, "vhp:f:o:w:", longopts, NULL)) != -1)
     switch (optc)
     {
@@ -172,6 +185,7 @@ int main(int argc, char *argv[])
     }
   if (lose || optind < argc)
   {
+    // invalid command line argument
     if (optind < argc) 
       fprintf(stderr, ("%s: extra operand: %\n"),
           program_name, argv[optind]);
@@ -218,4 +232,3 @@ static void print_version()
   printf("brunnr %s", VERSION);
   puts("");
 }
-      
