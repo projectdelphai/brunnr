@@ -7,8 +7,6 @@
 #include <getopt.h>
 #include <unistd.h>
 
-
-// methods
 void trim(char *str);
 static int callback(void *NotUsed, int argc, char **argv, char **azColName);
 static void print_version();
@@ -19,20 +17,19 @@ void write_db(char *sql);
 void parse_serial(char string[]);
 void read_serial();
 
-// variables
 const char *program_name = "brunnr";
 const char *VERSION = "0.0.2";
 char *portname = NULL;
 char *output = "stdout";
 char *db_file = NULL;
-char *search = "|";
-char *loop = NULL;
+char *search = ":"; // token which separates source, target, and message from each other
+char *loop = NULL; // how many times to read from serial port; if NULL, loop forever
 char buf[256];
-char *manual_message;
+char *manual_message; // directly write message to brunnr
 int manual_write = 1;
 int fd, n;
 
-// trim() removes newlines/carriage returns from a string
+// trim() removes all newlines/carriage returns from a string
 void trim(char *str) 
 {
   char *src, *dst;
@@ -43,7 +40,6 @@ void trim(char *str)
   *dst = '\0';
 }
 
-// setup_serial() opens a serial port for reading
 void setup_serial()
 {
   fd = open(portname, O_RDWR | O_NOCTTY);
@@ -52,6 +48,8 @@ void setup_serial()
 
   tcgetattr(fd, &toptions);
 
+  // 9600 seems to be the standard rate. This should eventually be changed
+  // to a command line argument as well.
   cfsetispeed(&toptions, B9600);
   cfsetospeed(&toptions, B9600);
   toptions.c_cflag &= ~PARENB;
@@ -65,17 +63,16 @@ void setup_serial()
   tcflush(fd, TCIFLUSH);
 }
 
-// read_serial() reads strings from the specific serial port 
-// and outputs it to either stdout or a database.
 void read_serial()
 {
   n = read(fd, buf, 256);
   buf[n] = 0;
-  trim(buf);
+  trim(buf); // otherwise stdout output skips lines because of hidden newlines
   if(strlen(buf) > 0) {
     if (output == "stdout") {
       printf("%s\n", buf);
     } else if (output == "db") {
+      // not yet written
     } else {
       printf("Output mode not supported. . .\n");
     }
@@ -94,6 +91,7 @@ static int callback(void *NotUsed, int argc, char **argv, char **azColName)
 }
 
 // write_db() is used to execute SQL statements on the specified database
+// It can execute any valid SQL.
 void write_db(char *sql)
 {
   sqlite3 *db;
@@ -119,7 +117,6 @@ void write_db(char *sql)
   sqlite3_close(db);
 }
 
-// setup_db() creates the necessary database and schema if it doesn't already exist
 void setup_db()
 {
   char *sql = "CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY, source TEXT NOT NULL, target TEXT NOT NULL, message TEXT NOT NULL)";
@@ -158,6 +155,7 @@ int main(int argc, char *argv[])
   program_name = argv[0];
 
   // sets variables based on command line arguments
+  // if switch requires a parameter, append a colon to the letter
   while ((optc = getopt_long (argc, argv, "vhp:f:o:w:", longopts, NULL)) != -1)
     switch (optc)
     {
@@ -194,9 +192,11 @@ int main(int argc, char *argv[])
   }
   if (portname != NULL) {
     setup_serial();
+    // set up db only if asked for
     if (output == "db") {
       setup_db();
     }
+    // determine number of times to loop before ending
     if (loop == NULL) {
       while (1<2) {
         read_serial();
