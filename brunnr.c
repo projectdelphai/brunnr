@@ -157,6 +157,7 @@ int main(int argc, char *argv[])
   // sets variables based on command line arguments
   // if switch requires a parameter, append a colon to the letter
   while ((optc = getopt_long (argc, argv, "vhp:f:o:w:", longopts, NULL)) != -1)
+  {
     switch (optc)
     {
       case 'v':
@@ -181,6 +182,7 @@ int main(int argc, char *argv[])
         manual_message = optarg;
         break;
     }
+  }
   if (lose || optind < argc)
   {
     // invalid command line argument
