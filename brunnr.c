@@ -24,7 +24,6 @@ char *output = "stdout";
 char *db_file = NULL;
 char *search = ":"; // token which separates source, target, and message from each other
 char *loop = NULL; // how many times to read from serial port; if NULL, loop forever
-char buf[256];
 char *manual_message; // directly write message to brunnr
 int manual_write = 1;
 int fd, n;
@@ -65,18 +64,19 @@ void setup_serial()
 
 void read_serial()
 {
-  n = read(fd, buf, 256);
+  usleep(1000*1000);
+  char buf[255];
+  n = read(fd, buf, 255);
   buf[n] = 0;
   trim(buf); // otherwise stdout output skips lines because of hidden newlines
   if(strlen(buf) > 0) {
     if (output == "stdout") {
       printf("%s\n", buf);
     } else if (output == "db") {
-      // not yet written
+      parse_serial(buf);
     } else {
       printf("Output mode not supported. . .\n");
     }
-    parse_serial(buf);
   }
 }
 
@@ -133,8 +133,9 @@ void parse_serial(char string[])
   char *target = strtok(NULL, search);
   char *message = strtok(NULL, search);
 
-  snprintf(sql, sizeof(sql), "INSERT INTO messages(id, source, target, message) values(NULL, '%s', '%s', '%s')", source, target, message);
-  write_db(sql);
+  //snprintf(sql, sizeof(sql), "INSERT INTO messages(id, source, target, message) values(NULL, '%s', '%s', '%s')", source, target, message);
+  //printf(sql);
+  //write_db(sql);
 }
 
 // option definitions
@@ -156,7 +157,7 @@ int main(int argc, char *argv[])
 
   // sets variables based on command line arguments
   // if switch requires a parameter, append a colon to the letter
-  while ((optc = getopt_long (argc, argv, "vhp:f:o:w:", longopts, NULL)) != -1)
+  while ((optc = getopt_long (argc, argv, "vhp:f:o:w:n:", longopts, NULL)) != -1)
   {
     switch (optc)
     {
@@ -180,6 +181,9 @@ int main(int argc, char *argv[])
       case 'w':
         manual_write = 0;
         manual_message = optarg;
+        break;
+      case 'n':
+        loop = optarg;
         break;
     }
   }
