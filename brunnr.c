@@ -28,20 +28,20 @@ char *manual_message; // directly write message to brunnr
 int manual_write = 1;
 int fd, n;
 
-// trim() removes all newlines/carriage returns from a string
-void trim(char *str) 
+// option definitions
+static const struct option longopts[] =
 {
-  char *src, *dst;
-  for (src = dst = str; *src != '\0'; src++) {
-    *dst = *src;
-    if (*dst != '\n') dst++;
-  }
-  *dst = '\0';
-}
+  { "help", no_argument, NULL, 'h' },
+  { "version", no_argument, NULL, 'v' },
+  { "port", required_argument, NULL, 'p' },
+  { "file", required_argument, NULL, 'f' },
+  { "output", required_argument, NULL, 'o' },
+  { NULL, 0, NULL, 0 }
+};
 
 void setup_serial()
 {
-  fd = open(portname, O_RDWR | O_NOCTTY);
+  fd = open(portname, O_RDWR | O_NOCTTY | O_NDELAY);
 
   struct termios toptions;
 
@@ -59,62 +59,7 @@ void setup_serial()
 
   tcsetattr(fd, TCSANOW, &toptions);
   usleep(1000*1000);
-  tcflush(fd, TCIFLUSH);
-}
-
-void read_serial()
-{
-  usleep(1000*1000);
-  char buf[255];
-  n = read(fd, buf, 255);
-  buf[n] = 0;
-  trim(buf); // otherwise stdout output skips lines because of hidden newlines
-  if(strlen(buf) > 0) {
-    if (output == "stdout") {
-      printf("%s\n", buf);
-    } else if (output == "db") {
-      parse_serial(buf);
-    } else {
-      printf("Output mode not supported. . .\n");
-    }
-  }
-}
-
-static int callback(void *NotUsed, int argc, char **argv, char **azColName) 
-{
-  int i;
-  for(i=0;i<argc;i++) {
-    printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-  }
-  printf("\n");
-  return 0;
-}
-
-// write_db() is used to execute SQL statements on the specified database
-// It can execute any valid SQL.
-void write_db(char *sql)
-{
-  sqlite3 *db;
-  char *zErrMsg = 0;
-  int rc = 0;
-
-  if (db_file == NULL) {
-    printf("Database filename hasn't been specified. . .\n");
-    exit(1);
-  }
-  rc = sqlite3_open(db_file, &db);
-
-  if ( rc ) {
-    fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-  }
-
-  rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-  if (rc != SQLITE_OK) {
-    fprintf(stderr, "SQL error: %s\n", zErrMsg);
-    sqlite3_free(zErrMsg);
-  }
-
-  sqlite3_close(db);
+  tcflush(fd, TCIOFLUSH);
 }
 
 void setup_db()
@@ -122,32 +67,6 @@ void setup_db()
   char *sql = "CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY, source TEXT NOT NULL, target TEXT NOT NULL, message TEXT NOT NULL)";
   write_db(sql);
 }
-
-// parse_serial() separates an incoming string into source, target, and message
-// and creates a SQL statement to send to write_db()
-void parse_serial(char string[]) 
-{
-  char sql[1024];
-  
-  char *source = strtok(string, search);
-  char *target = strtok(NULL, search);
-  char *message = strtok(NULL, search);
-
-  //snprintf(sql, sizeof(sql), "INSERT INTO messages(id, source, target, message) values(NULL, '%s', '%s', '%s')", source, target, message);
-  //printf(sql);
-  //write_db(sql);
-}
-
-// option definitions
-static const struct option longopts[] =
-{
-  { "help", no_argument, NULL, 'h' },
-  { "version", no_argument, NULL, 'v' },
-  { "port", required_argument, NULL, 'p' },
-  { "file", required_argument, NULL, 'f' },
-  { "output", required_argument, NULL, 'o' },
-  { NULL, 0, NULL, 0 }
-};
 
 int main(int argc, char *argv[])
 {
@@ -219,6 +138,89 @@ int main(int argc, char *argv[])
     }
     printf("Portname not specified\n");
   }
+
+  close(fd);
+}
+
+void read_serial()
+{
+  usleep(1000*1000);
+  char buf[255];
+  n = read(fd, buf, 255);
+  buf[n] = 0;
+  trim(buf); // otherwise stdout output skips lines because of hidden newlines
+  if(strlen(buf) > 0) {
+    if (output == "stdout") {
+      printf("%s\n", buf);
+    } else if (output == "db") {
+      parse_serial(buf);
+    } else {
+      printf("Output mode not supported. . .\n");
+    }
+  }
+}
+
+// parse_serial() separates an incoming string into source, target, and message
+// and creates a SQL statement to send to write_db()
+void parse_serial(char string[]) 
+{
+  char sql[1024];
+  
+  char *source = strtok(string, search);
+  char *target = strtok(NULL, search);
+  char *message = strtok(NULL, search);
+
+  snprintf(sql, sizeof(sql), "INSERT INTO messages(id, source, target, message) values(NULL, '%s', '%s', '%s')", source, target, message);
+  printf(sql);
+  write_db(sql);
+}
+
+static int callback(void *NotUsed, int argc, char **argv, char **azColName) 
+{
+  int i;
+  for(i=0;i<argc;i++) {
+    printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+  }
+  printf("\n");
+  return 0;
+}
+
+// write_db() is used to execute SQL statements on the specified database
+// It can execute any valid SQL.
+void write_db(char *sql)
+{
+  sqlite3 *db;
+  char *zErrMsg = 0;
+  int rc = 0;
+
+  if (db_file == NULL) {
+    printf("Database filename hasn't been specified. . .\n");
+    exit(1);
+  }
+  rc = sqlite3_open(db_file, &db);
+
+  if ( rc ) {
+    fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+  }
+
+  rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
+  if (rc != SQLITE_OK) {
+    fprintf(stderr, "SQL error: %s\n", zErrMsg);
+    sqlite3_free(zErrMsg);
+  }
+
+  sqlite3_close(db);
+}
+
+// trim() removes all newlines/carriage returns from a string
+void trim(char *str) 
+{
+  char *src, *dst;
+  for (src = dst = str; *src != '\0'; src++) {
+    *dst = *src;
+    if (*dst != '\n') dst++;
+  }
+  *dst = '\0';
 }
 
 static void print_help()
@@ -227,7 +229,13 @@ static void print_help()
   fprintf(stdout, "Usage; brunnr [OPTION] \n");
   fprintf(stdout, "Interact with arduinos through the serial port.\n");
   puts ("");
-  fprintf(stdout, "-h, --help          print this help message\n-v, --version       print the current version number\n");
+  fprintf(stdout, "-f, --file          specify which database file to use\n");
+  fprintf(stdout, "-h, --help          print this help message\n");
+  fprintf(stdout, "-n, --number        specify number of times to run\n");
+  fprintf(stdout, "-o, --output        specify which output to use\n");
+  fprintf(stdout, "-p, --port          specify which port to use\n");
+  fprintf(stdout, "-v, --version       print the current version number\n");
+  fprintf(stdout, "-w, --write         manually write message across port\n");
   fprintf(stdout, "\n");
   fprintf(stdout, "Report bugs to https://github.com/projectdelphai/brunnr\n");
   puts ("");
