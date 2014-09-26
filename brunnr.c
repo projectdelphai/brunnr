@@ -13,19 +13,22 @@ static void print_version();
 static void print_help();
 void setup_serial();
 void setup_db();
+void check_file();
 void write_db(char *sql);
-void parse_serial(char string[]);
-void read_serial();
+void parse_incoming(char string[]);
+void write_file(char string[]);
+void read_data();
 
 const char *program_name = "brunnr";
 const char *VERSION = "0.0.2";
-char *portname = NULL;
-char *output = "stdout";
-char *db_file = NULL;
 char *search = ":"; // token which separates source, target, and message from each other
+char *write_method = "stdout"; // directly write message to brunnr
+char *read_method = "serial";
 char *loop = NULL; // how many times to read from serial port; if NULL, loop forever
-char *manual_message; // directly write message to brunnr
-int manual_write = 1;
+char *portname = NULL;
+char *file;
+char *db_file = "arduino_messages.db";
+int wait_time = 25;
 int fd, n;
 
 // option definitions
@@ -36,6 +39,9 @@ static const struct option longopts[] =
   { "port", required_argument, NULL, 'p' },
   { "file", required_argument, NULL, 'f' },
   { "output", required_argument, NULL, 'o' },
+  { "number", required_argument, NULL, 'n' },
+  { "write", required_argument, NULL, 'w' },
+  { "time-delay", required_argument, NULL, 't' },
   { NULL, 0, NULL, 0 }
 };
 
@@ -68,6 +74,11 @@ void setup_db()
   write_db(sql);
 }
 
+void check_file() {
+  printf("Hasn't been implemented yet\n");
+  exit(1);
+}
+
 int main(int argc, char *argv[])
 {
   int optc;
@@ -76,7 +87,7 @@ int main(int argc, char *argv[])
 
   // sets variables based on command line arguments
   // if switch requires a parameter, append a colon to the letter
-  while ((optc = getopt_long (argc, argv, "vhp:f:o:w:n:", longopts, NULL)) != -1)
+  while ((optc = getopt_long (argc, argv, "vhp:f:d:n:w:r:t:", longopts, NULL)) != -1)
   {
     switch (optc)
     {
@@ -92,17 +103,36 @@ int main(int argc, char *argv[])
         portname = optarg;
         break;
       case 'f':
+        file = optarg;
+        break;
+      case 'd':
         db_file = optarg;
-        break;
-      case 'o':
-        output = "db";
-        break;
-      case 'w':
-        manual_write = 0;
-        manual_message = optarg;
         break;
       case 'n':
         loop = optarg;
+        break;
+      case 'w':
+        if (strcmp(optarg, "file") == 0  || strcmp(optarg, "db") == 0  || strcmp(optarg, "stdout") == 0 ) {
+          write_method = optarg;
+        } else {
+          printf("Invalid write method\n");
+          exit(1);
+        }
+        break;
+      case 'r':
+        if (strcmp(optarg, "file") == 0) {
+          read_method = optarg;
+        } else if (strcmp(optarg, "db") == 0) {
+          read_method = optarg;
+        } else if (strcmp(optarg, "serial") == 0 ) {
+          read_method = optarg;
+        } else {
+          printf("Invalid read method\n");
+          exit(1);
+        }
+        break;
+      case 't':
+        wait_time = atoi(optarg);
         break;
     }
   }
@@ -115,54 +145,60 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Try 'brunnr --help' for more information.\n");
     exit(1);
   }
-  if (portname != NULL) {
-    setup_serial();
-    // set up db only if asked for
-    if (output == "db") {
-      setup_db();
-    }
-    // determine number of times to loop before ending
-    if (loop == NULL) {
-      while (1<2) {
-        read_serial();
-      }
+  if (strcmp(read_method, "file") == 0 || strcmp(write_method, "file") == 0 ) {
+    check_file();
+  }
+  if (strcmp(read_method, "db")  == 0 || strcmp(write_method, "db") == 0 ) {
+    setup_db();
+  }
+  if (strcmp(read_method, "serial") == 0 ) {
+    if (portname != NULL) {
+      setup_serial();
     } else {
-      for (int i=0; i < atoi(loop); i++) {
-        read_serial();
-      }
+      printf("Portname not specified\n");
+      exit(1);
+   }
+  }
+ if (loop == NULL) {
+    while (1<2) {
+      read_data();
     }
   } else {
-    if (manual_write == 0) {
-      setup_db();
-      parse_serial(manual_message);
+    for (int i=0; i < atoi(loop); i++) {
+      read_data();
     }
-    printf("Portname not specified\n");
   }
-
   close(fd);
 }
 
-void read_serial()
-{
-  usleep(1000*1000);
+void read_data() {
   char buf[255];
-  n = read(fd, buf, 255);
-  buf[n] = 0;
-  trim(buf); // otherwise stdout output skips lines because of hidden newlines
+  if (strcmp(read_method, "serial") == 0) {
+    usleep(wait_time*100);
+    n = read(fd, buf, 255);
+    buf[n] = 0;
+    trim(buf); // otherwise stdout output skips lines because of hidden newlines
+  } else if (strcmp(read_method, "file") == 0) {
+    printf("Hasn't been implemented yet\n");
+    exit(1);
+  } else if (strcmp(read_method, "db") == 0) {
+    printf("Hasn't been implemented yet\n");
+    exit(1);
+  }
   if(strlen(buf) > 0) {
-    if (output == "stdout") {
-      printf("%s\n", buf);
-    } else if (output == "db") {
-      parse_serial(buf);
+    if (strcmp(write_method, "file") == 0) {
+      write_file(buf);
+    } else if (strcmp(write_method, "db") == 0) {
+      parse_incoming(buf);
     } else {
-      printf("Output mode not supported. . .\n");
+      printf("%s\n", buf);
     }
   }
 }
 
-// parse_serial() separates an incoming string into source, target, and message
+// parse_incoming() separates an incoming string into source, target, and message
 // and creates a SQL statement to send to write_db()
-void parse_serial(char string[]) 
+void parse_incoming(char string[]) 
 {
   char sql[1024];
   
@@ -173,6 +209,10 @@ void parse_serial(char string[])
   snprintf(sql, sizeof(sql), "INSERT INTO messages(id, source, target, message) values(NULL, '%s', '%s', '%s')", source, target, message);
   printf(sql);
   write_db(sql);
+}
+
+void write_file(char string[]) {
+  printf("Not implemented yet");
 }
 
 static int callback(void *NotUsed, int argc, char **argv, char **azColName) 
@@ -234,8 +274,9 @@ static void print_help()
   fprintf(stdout, "-n, --number        specify number of times to run\n");
   fprintf(stdout, "-o, --output        specify which output to use\n");
   fprintf(stdout, "-p, --port          specify which port to use\n");
+  fprintf(stdout, "-t, --time-delay    specify wait time between reads (default: 25, +1 per char)\n");
   fprintf(stdout, "-v, --version       print the current version number\n");
-  fprintf(stdout, "-w, --write         manually write message across port\n");
+  fprintf(stdout, "-w, --write         manually write message to database\n");
   fprintf(stdout, "\n");
   fprintf(stdout, "Report bugs to https://github.com/projectdelphai/brunnr\n");
   puts ("");
